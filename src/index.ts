@@ -150,7 +150,7 @@ function getDiffs(this: Model<Document>, id: Types.ObjectId, queryOpts?: any) {
  */
 export default function mongooseJsonDiff(schema: Schema, opts: any = {}) {
   if (opts.mongoose === undefined) {
-    throw new Error('Please, pass mongoose while requiring mongoose-jsondiff');
+    throw new Error('Please, pass mongoose while requiring mongoose-jsondiffpatch');
   }
 
   const mongoose: Mongoose = opts.mongoose;

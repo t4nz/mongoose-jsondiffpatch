@@ -1,12 +1,12 @@
-mongoose-jsondiff
+mongoose-jsondiffpatch
 =============
 
 Mongoose collections history using jsondiffpatch
 ## Installation
 ---------------
 ``` sh
-yarn add mongoose-jsondiff
-npm i mongoose-jsondiff
+yarn add mongoose-jsondiffpatch
+npm i mongoose-jsondiffpatch
 ```
 
 ## Operation
@@ -36,7 +36,7 @@ Use as you would any Mongoose plugin:
 
 ```js
 import * as mongoose from 'mongoose';
-import mongooseJsondiff from 'mongoose-jsondiff';
+import mongooseJsondiff from 'mongoose-jsondiffpatch';
 
 const schema = new mongoose.Schema({ ... });
 schema.plugin(mongooseJsondiff, { mongoose });
@@ -48,7 +48,7 @@ keys from history. Follows dot syntax for deeply nested values.
 
 ```js
 import * as mongoose from 'mongoose';
-import mongooseJsondiff from 'mongoose-jsondiff';
+import mongooseJsondiff from 'mongoose-jsondiffpatch';
 
 const schema = new mongoose.Schema({
     someField: String,

@@ -1,5 +1,5 @@
 {
-  "name": "mongoose-jsondiff",
+  "name": "mongoose-jsondiffpatch",
   "version": "1.0.0",
   "description": "Mongoose collections history using jsondiffpatch",
   "main": "lib/index.js",
