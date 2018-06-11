@@ -1,0 +1,18 @@
+extends:
+  - "tslint:latest"
+  - "tslint-config-airbnb"
+  - "tslint-consistent-codestyle"
+  - "tslint-config-prettier"
+
+jsRules:
+
+rules:
+  no-console: false
+  object-literal-sort-keys: false
+  interface-name: [true, "never-prefix"]
+  variable-name: false
+  array-type: false
+  no-return-await: true
+  no-submodule-imports: false
+  no-implicit-dependencies: [true, "dev"]
+  no-boolean-literal-compare: true
