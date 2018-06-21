@@ -3,10 +3,11 @@ mongoose-jsondiffpatch
 
 Mongoose collections history using jsondiffpatch
 
-[![npm](https://img.shields.io/npm/v/npm.svg)](https://www.npmjs.com/package/mongoose-jsondiffpatch)
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/t4nz/mongoose-jsondiffpatch/blob/master/LICENSE)
-[![npm](https://img.shields.io/npm/dm/localeval.svg)](https://www.npmjs.com/package/mongoose-jsondiffpatch)
+[![npm](https://img.shields.io/npm/v/mongoose-jsondiffpatch.svg)](https://www.npmjs.com/package/mongoose-jsondiffpatch)
+[![GitHub license](https://img.shields.io/github/license/t4nz/mongoose-jsondiffpatch.svg)](https://github.com/t4nz/mongoose-jsondiffpatch/blob/master/LICENSE)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5f0f54069d254079bdf9e5c71eb7debc)](https://www.codacy.com/app/t4nz/mongoose-jsondiffpatch?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=t4nz/mongoose-jsondiffpatch&amp;utm_campaign=Badge_Grade)
+[![npm](https://img.shields.io/npm/dm/mongoose-jsondiffpatch.svg)](https://www.npmjs.com/package/mongoose-jsondiffpatch)
+[![TypeScript](https://badges.frapsoft.com/typescript/version/typescript-next.svg?v=101)](https://github.com/ellerbrock/typescript-badges/)
 
 ## Installation
 ---------------
