@@ -85,6 +85,9 @@ typings/
 # dotenv environment variables file
 .env
 
+# build directory
+lib
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db
