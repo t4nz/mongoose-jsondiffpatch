@@ -2,7 +2,21 @@
   "name": "mongoose-jsondiffpatch",
   "version": "1.1.1",
   "description": "Mongoose collections history using jsondiffpatch",
+  "keywords": [
+    "mongoose",
+    "diff",
+    "history",
+    "versioning",
+    "jsondiffpatch"
+  ],
+  "homepage": "https://github.com/t4nz/mongoose-jsondiffpatch",
+  "license": "MIT",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/t4nz/mongoose-jsondiffpatch"
+  },
   "author": {
     "name": "Gaetano Fiorello",
     "email": "gfiorello@gmail.com"
@@ -16,21 +30,14 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "is-plain-object": "^2.0.4",
     "jsondiffpatch": "^0.3.10"
   },
   "devDependencies": {
-    "@types/mongoose": "^5.0.15",
-    "mongoose": "^5.1.4"
+    "@types/mongoose": "^5.0.18",
+    "mongoose": "^5.1.6"
   },
   "engines": {
     "node": "*"
-  },
-  "keywords": [
-    "mongoose",
-    "diff",
-    "history",
-    "versioning",
-    "jsondiffpatch"
-  ],
-  "license": "MIT"
+  }
 }

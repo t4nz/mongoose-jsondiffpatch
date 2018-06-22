@@ -1,40 +1,27 @@
-function isPlainObject(v: any) {
-  return Object.prototype.toString.call(v) === '[object Object]';
+import * as isPlainObject from 'is-plain-object';
+
+interface SourceObject {
+  [key: string]: any;
 }
 
-export default function omitDeep(value: any, keys: string[]) {
-  if (typeof value === 'undefined') {
-    return {};
+type Source = SourceObject | SourceObject[];
+type Paths = string | string[];
+
+export default function omitDeep(source: Source, paths: Paths): Source {
+  if (!source) return source;
+
+  const keys = Array.isArray(paths) ? paths : [paths];
+  if (!keys.length) return source;
+
+  if (Array.isArray(source)) {
+    return source.map<Source>(s => omitDeep(s, keys));
   }
 
-  if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      value[i] = omitDeep(value[i], keys);
-    }
-    return value;
+  if (isPlainObject(source)) {
+    keys.forEach(key => delete source[key]);
+    Object.keys(source).forEach(key => {
+      source[key] = omitDeep(source[key], paths);
+    });
   }
-
-  if (!isPlainObject(value)) {
-    return value;
-  }
-
-  if (typeof keys === 'string') {
-    keys = [keys];
-  }
-
-  if (!Array.isArray(keys)) {
-    return value;
-  }
-
-  for (let j = 0; j < keys.length; j++) {
-    delete value[keys[j]];
-  }
-
-  for (let key in value) {
-    if (value.hasOwnProperty(key)) {
-      value[key] = omitDeep(value[key], keys);
-    }
-  }
-
-  return value;
+  return source;
 }

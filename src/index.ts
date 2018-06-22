@@ -1,8 +1,14 @@
 import * as jsondiffpatch from 'jsondiffpatch';
-import { Document, Model, Mongoose, Promise, Schema, Types } from 'mongoose';
+import { Document, Model, Mongoose, Schema, Types, Query } from 'mongoose';
 
 import { HistoryDocument, HistorySchema } from './HistoryModel';
-import omit from './omitDeep';
+import omitDeep from './omitDeep';
+
+export interface PluginOptions {
+  mongoose: Mongoose;
+  omit?: string | string[];
+  [k: string]: any;
+}
 
 var History: Model<HistoryDocument>;
 
@@ -12,69 +18,88 @@ const diffPatcher = (jsondiffpatch as any).create({
 
 /**
  *
- *
+ * Compares documents and save a json diff object.
  * @param {Document} current Current document
  * @param {Document} orig Original document
- * @param {*} updated Updated document or update params
- * @param {*} opts Options passed by Mongoose Schema.plugin
+ * @param {*} updates Update params
+ * @param {*} pluginOpts Options passed by Mongoose Schema.plugin
  * @param {*} [meta] Extra meta data
  * @returns
  */
-function saveDiffObject(current: Document, orig: Document, updated: any, opts: any, meta?: any) {
+async function saveDiffObject(
+  current: Document,
+  orig: Document,
+  updates: any = {},
+  pluginOpts: PluginOptions,
+  meta?: any,
+) {
   const { __user: user, __reason: reason, __update: update } = meta || current;
+  const { omit } = pluginOpts;
 
-  const diff = diffPatcher.diff(JSON.parse(JSON.stringify(orig)), JSON.parse(JSON.stringify(updated || {})));
+  try {
+    let diff = diffPatcher.diff(JSON.parse(JSON.stringify(orig)), JSON.parse(JSON.stringify(updates)));
+    if (omit) diff = omitDeep(diff, omit);
 
-  if (opts.omit) omit(diff, opts.omit);
-  if (!diff || !Object.keys(diff).length) return Promise.resolve();
+    if (!diff || !Object.keys(diff).length) return;
 
-  const collectionId = current._id;
-  const collectionName = (current as any).constructor.modelName;
+    const collectionId = current._id;
+    const collectionName = (current as any).constructor.modelName;
 
-  return History.findOne({
-    collectionId,
-    collectionName,
-  })
-    .sort('-version')
-    .then(last => {
-      if (last && update === true) {
-        Object.assign(last, { diff, user, reason });
-        return last.save();
-      }
+    const last = await History.findOne({
+      collectionId,
+      collectionName,
+    }).sort('-version');
 
-      const history = new History({
-        collectionId,
-        collectionName,
-        diff,
-        user,
-        reason,
-        version: last ? last.version + 1 : 0,
-      });
-      return history.save();
+    if (last && update === true) {
+      Object.assign(last, { diff, user, reason });
+      return last.save();
+    }
+
+    const history = new History({
+      collectionId,
+      collectionName,
+      diff,
+      user,
+      reason,
+      version: last ? last.version + 1 : 0,
     });
+    return history.save();
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
  *
  * Save differences
- * @param {*} query Query object
- * @param {*} opts Options passed by Mongoose Schema.plugin
- * @returns
+ * @param {Query<any>} query
+ * @param {PluginOptions} pluginOpts
  */
-function saveDiffs(query: any, opts: any) {
-  return query
-    .find(query._conditions)
-    .lean(false)
-    .cursor()
-    .eachAsync((result: any) => {
-      const updates = query._update['$set'] || {};
-      Object.keys(query._update).forEach(k => {
-        if (!k.startsWith('$')) updates[k] = query._update[k];
-      });
+async function saveDiffs(query: Query<any>, pluginOpts: PluginOptions) {
+  const conditions = query.getQuery();
+  const updates = query.getUpdate();
+  const queryOptions = (query as any).options;
 
-      const orig = Object.assign({}, ...Object.keys(updates).map(k => ({ [k]: result[k] })));
-      return saveDiffObject(result, orig, updates, opts, query.options);
-    });
+  try {
+    await query
+      .find(conditions)
+      .lean(false)
+      .cursor()
+      .eachAsync(async document => {
+        const changes = updates.$set || {};
+
+        Object.keys(updates)
+          .filter(k => !k.startsWith('$'))
+          .forEach(k => {
+            changes[k] = updates[k];
+          });
+
+        const orig = Object.assign({}, ...Object.keys(changes).map(k => ({ [k]: document[k] })));
+        await saveDiffObject(document, orig, changes, pluginOpts, queryOptions);
+      });
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
@@ -86,35 +111,34 @@ function saveDiffs(query: any, opts: any) {
  * @param {*} [queryOpts] Query options
  * @returns
  */
-function getVersion(this: Model<Document>, id: Types.ObjectId, version: string | number, queryOpts?: any) {
-  return this.findById(id, null, queryOpts)
-    .then(latest => {
-      return History.find(
-        {
-          collectionName: this.modelName,
-          collectionId: id,
-          version: {
-            $gte: typeof version === 'string' ? parseInt(version, 10) : version,
-          },
+async function getVersion(this: Model<Document>, id: Types.ObjectId, version: string | number, queryOpts?: any) {
+  try {
+    const latest = await this.findById(id, null, queryOpts);
+    await History.find(
+      {
+        collectionName: this.modelName,
+        collectionId: id,
+        version: {
+          $gte: typeof version === 'string' ? parseInt(version, 10) : version,
         },
-        {
-          diff: 1,
-          version: 1,
-        },
-        {
-          sort: '-version',
-        },
-      )
-        .lean()
-        .cursor()
-        .eachAsync(history => {
-          diffPatcher.unpatch(latest, history.diff);
-        })
-        .then(() => latest || {});
-    })
-    .catch(err => {
-      throw err;
-    });
+      },
+      {
+        diff: 1,
+        version: 1,
+      },
+      {
+        sort: '-version',
+      },
+    )
+      .lean()
+      .cursor()
+      .eachAsync(history => {
+        diffPatcher.unpatch(latest, history.diff);
+      });
+    return latest || {};
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
@@ -125,21 +149,22 @@ function getVersion(this: Model<Document>, id: Types.ObjectId, version: string |
  * @param {*} [queryOpts] Query options
  * @returns
  */
-function getDiffs(this: Model<Document>, id: Types.ObjectId, queryOpts?: any) {
-  return History.find(
-    {
-      collectionName: this.modelName,
-      collectionId: id,
-    },
-    null,
-    queryOpts,
-  )
-    .lean()
-    .exec()
-    .then(histories => histories)
-    .catch(err => {
-      throw err;
-    });
+async function getDiffs(this: Model<Document>, id: Types.ObjectId, queryOpts?: any) {
+  try {
+    const histories = await History.find(
+      {
+        collectionName: this.modelName,
+        collectionId: id,
+      },
+      null,
+      queryOpts,
+    )
+      .lean()
+      .exec();
+    return histories;
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
@@ -148,52 +173,63 @@ function getDiffs(this: Model<Document>, id: Types.ObjectId, queryOpts?: any) {
  * @param {Mongoose} [opts.mongoose] Mongoose instance to use
  * @param {string|string[]} [opts.omit] fields to omit from diffs (ex. ['a', 'b.c.d'])
  */
-export default function mongooseJsonDiff(schema: Schema, opts: any = {}) {
-  if (opts.mongoose === undefined) {
+export default function mongooseJsonDiff(schema: Schema, pluginOpts: PluginOptions) {
+  if (!pluginOpts || !pluginOpts.mongoose) {
     throw new Error('Please, pass mongoose while requiring mongoose-jsondiffpatch');
   }
 
-  const mongoose: Mongoose = opts.mongoose;
+  const { mongoose } = pluginOpts;
   History = mongoose.model('History', HistorySchema);
 
-  if (opts.omit && typeof opts.omit === 'string') {
-    opts.omit = [opts.omit];
-  }
-
-  schema.pre('save', function(next) {
+  schema.pre('save', async function(next) {
     if (this.isNew) return next();
 
-    this.collection
-      .findOne({
+    try {
+      const orig = await this.collection.findOne({
         _id: this._id,
-      })
-      .then(orig => saveDiffObject(this, orig, this, opts))
-      .then(() => next())
-      .catch(next);
+      });
+
+      await saveDiffObject(this, orig, this.toJSON(), pluginOpts);
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
-  schema.pre('findOneAndUpdate', function(next) {
-    saveDiffs(this, opts)
-      .then(() => next())
-      .catch(next);
+  schema.pre('findOneAndUpdate', async function(next) {
+    try {
+      await saveDiffs(this, pluginOpts);
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
-  schema.pre('update', function(next) {
-    saveDiffs(this, opts)
-      .then(() => next())
-      .catch(next);
+  schema.pre('update', async function(next) {
+    try {
+      await saveDiffs(this, pluginOpts);
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
-  schema.pre('updateOne', function(next) {
-    saveDiffs(this, opts)
-      .then(() => next())
-      .catch(next);
+  schema.pre('updateOne', async function(next) {
+    try {
+      await saveDiffs(this as Query<any>, pluginOpts);
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
-  schema.pre('remove', function(next) {
-    saveDiffObject(this, this, null, opts)
-      .then(() => next())
-      .catch(next);
+  schema.pre('remove', async function(next) {
+    try {
+      await saveDiffObject(this, this, {}, pluginOpts);
+      next();
+    } catch (err) {
+      next(err);
+    }
   });
 
   // assign a function to the "statics" object of schema
