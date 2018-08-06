@@ -173,7 +173,7 @@ async function getDiffs(this: Model<Document>, id: Types.ObjectId, queryOpts?: a
  * @param {Mongoose} [opts.mongoose] Mongoose instance to use
  * @param {string|string[]} [opts.omit] fields to omit from diffs (ex. ['a', 'b.c.d'])
  */
-export default function mongooseJsonDiff(schema: Schema, pluginOpts: PluginOptions) {
+export default function mongooseJsonDiff(schema: Schema, pluginOpts?: PluginOptions) {
   if (!pluginOpts || !pluginOpts.mongoose) {
     throw new Error('Please, pass mongoose while requiring mongoose-jsondiffpatch');
   }
